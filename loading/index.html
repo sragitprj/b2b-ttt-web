@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>B2B | TTT</title>
+<!--
+  B2B TTT loading screen. Served over HTTPS and set as sv_loadingurl, e.g.
+  sv_loadingurl "https://<host>/loading/?steamid=%s&map=%m"
+
+  Kept to one small file with no external fonts, images or scripts so it
+  shows instantly. Written for the old browser in GMod's default 32-bit
+  build: ES5 only, vendor-prefixed gradients, no flexbox or CSS variables.
+-->
+<style>
+html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+body {
+    background: #0f1115;
+    background-image: -webkit-radial-gradient(50% 0%, ellipse cover, #1f2430 0%, #0f1115 70%);
+    background-image: radial-gradient(ellipse at 50% 0%, #1f2430 0%, #0f1115 70%);
+    color: #e8eaed;
+    font-family: "Segoe UI", Tahoma, Verdana, sans-serif;
+}
+.wrap { position: absolute; left: 0; right: 0; bottom: 12%; padding: 0 8%; }
+
+.brand { font-size: 64px; font-weight: bold; letter-spacing: 2px; line-height: 1; }
+.brand .b2b { color: #ff8a1f; }
+.brand .mode { color: #e8eaed; font-weight: normal; }
+.tagline { color: #9aa0a6; font-size: 18px; margin: 10px 0 36px; }
+
+.panel {
+    background: rgba(23, 26, 33, 0.85);
+    border: 1px solid #262b36;
+    border-left: 3px solid #ff8a1f;
+    border-radius: 8px;
+    padding: 20px 24px;
+    max-width: 760px;
+}
+.row { overflow: hidden; margin-bottom: 12px; font-size: 15px; }
+.row .label { float: left; color: #9aa0a6; }
+.row .value { float: right; color: #e8eaed; }
+
+.bar { height: 8px; background: #262b36; border-radius: 4px; overflow: hidden; }
+.bar .fill {
+    height: 8px; width: 4%; background: #ff8a1f; border-radius: 4px;
+    -webkit-transition: width 0.2s ease-out; transition: width 0.2s ease-out;
+}
+.status { color: #9aa0a6; font-size: 13px; margin-top: 10px; height: 18px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+.tip { margin-top: 28px; font-size: 16px; color: #e8eaed; max-width: 760px; min-height: 44px; }
+.tip .tag { color: #ff8a1f; font-weight: bold; margin-right: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="brand"><span class="b2b">B2B</span> <span class="mode">TTT</span></div>
+    <div class="tagline">Fast rounds. Trust no one. Sister server of B2B | RP#4.</div>
+
+    <div class="panel">
+        <div class="row"><span class="label">Map</span><span class="value" id="map">&nbsp;</span></div>
+        <div class="row"><span class="label" id="phase">Connecting</span><span class="value" id="count">&nbsp;</span></div>
+        <div class="bar"><div class="fill" id="fill"></div></div>
+        <div class="status" id="status">&nbsp;</div>
+    </div>
+
+    <div class="tip"><span class="tag">TIP</span><span id="tip"></span></div>
+</div>
+
+<script>
+(function () {
+    var tips = [
+        "Rounds start at 4 minutes, and every death adds 30 seconds. Don't sit still.",
+        "Like this crowd? Join B2B | RP#4, our 2012-era DarkRP server.",
+        "Killing innocents lowers your karma, and low karma means less damage. Don't RDM.",
+        "Detectives can be trusted. Probably.",
+        "Dead players can still watch. No ghosting: don't tell the living what you saw."
+    ];
+
+    var filesTotal = 0;
+    var filesNeeded = 0;
+
+    function el(id) { return document.getElementById(id); }
+
+    function setText(id, text) {
+        var node = el(id);
+        if (node) { node.textContent = text; }
+    }
+
+    function query(name) {
+        var match = new RegExp("[?&]" + name + "=([^&]*)").exec(window.location.search);
+        return match ? decodeURIComponent(match[1].replace(/\+/g, " ")) : "";
+    }
+
+    function setProgress(fraction) {
+        fraction = Math.max(0.04, Math.min(1, fraction));
+        el("fill").style.width = Math.round(fraction * 100) + "%";
+    }
+
+    function updateDownloads() {
+        if (filesTotal > 0) {
+            var done = filesTotal - filesNeeded;
+            setText("phase", "Downloading");
+            setText("count", done + " / " + filesTotal);
+            setProgress(done / filesTotal);
+        }
+    }
+
+    // Called by Garry's Mod.
+    window.GameDetails = function (serverName, serverUrl, mapName, maxPlayers, steamId, gamemode) {
+        if (mapName) { setText("map", mapName); }
+    };
+    window.SetFilesTotal = function (total) {
+        filesTotal = Number(total) || 0;
+        updateDownloads();
+    };
+    window.SetFilesNeeded = function (needed) {
+        filesNeeded = Number(needed) || 0;
+        updateDownloads();
+    };
+    window.DownloadingFile = function (fileName) {
+        setText("status", fileName);
+    };
+    window.SetStatusChanged = function (status) {
+        setText("status", status);
+        if (filesTotal === 0 || filesNeeded === 0) {
+            setText("phase", "Joining");
+            setText("count", "");
+            // No downloads to measure, so creep forward with each step.
+            var current = parseInt(el("fill").style.width, 10) || 4;
+            setProgress((current + (100 - current) * 0.25) / 100);
+        }
+    };
+
+    var map = query("map");
+    if (map) { setText("map", map); }
+
+    var tipIndex = Math.floor(Math.random() * tips.length);
+    function nextTip() {
+        setText("tip", tips[tipIndex]);
+        tipIndex = (tipIndex + 1) % tips.length;
+    }
+    nextTip();
+    setInterval(nextTip, 6000);
+})();
+</script>
+</body>
+</html>
